@@ -1,0 +1,37 @@
+service: refresh-apps
+
+provider:
+  name: aws
+  runtime: python3.7
+  account: ${ssm:/amazon_account_id}
+  timeout: 900
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - sqs:SendMessage
+      Resource:
+        - arn:aws:sqs:${self:provider.region}:${self:provider.account}:applications.fifo
+    - Effect: 'Allow'
+      Action:
+        - dynamodb:Scan
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/Applications
+  environment:
+    AWS_ACCOUNT: ${self:provider.account}
+
+plugins:
+  - serverless-python-requirements
+  - serverless-plugin-aws-alerts
+functions:
+  refresh-apps:
+    handler: handler.refresh_apps
+    events:
+      - schedule: rate(24 hours)
+
+package:
+  include:
+    - ../commons/*
+
+custom:
+  pythonRequirements:
+    dockerizePip: true

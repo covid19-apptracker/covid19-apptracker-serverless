@@ -1,0 +1,50 @@
+service: update-github-web-files
+
+provider:
+  name: aws
+  runtime: python3.7
+  account: ${ssm:/amazon_account_id}
+  timeout: 900
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'secretsmanager:GetResourcePolicy'
+        - 'secretsmanager:GetSecretValue'
+        - 'secretsmanager:DescribeSecret'
+        - 'secretsmanager:ListSecretVersionIds'
+      Resource:
+        - 'arn:aws:secretsmanager:${self:provider.region}:${self:provider.account}:secret:github_token*'
+        - 'arn:aws:secretsmanager:${self:provider.region}:${self:provider.account}:secret:google_api*'
+    - Effect: 'Allow'
+      Action:
+        - 'kms:Decrypt'
+        - 'kms:Describe*'
+        - 'kms:Get*'
+      Resource:
+        - 'arn:aws:kms:${self:provider.region}:${self:provider.account}:key/${ssm:/kms_key_id}'
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:Scan'
+      Resource:
+        - 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/Applications'
+    - Effect: 'Allow'
+      Action:
+        - 'ssm:GetParameter'
+      Resource:
+        - 'arn:aws:ssm:${self:provider.region}:${self:provider.account}:parameter/google_spreadsheet_id'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+plugins:
+  - serverless-python-requirements
+functions:
+  update-github-web-files:
+    handler: handler.update_github_files
+    events:
+      - schedule: rate(12 hours)
+
+package:
+  include:
+    - ../commons/*

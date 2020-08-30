@@ -1,0 +1,41 @@
+service: search-google-play-store
+
+provider:
+  name: aws
+  runtime: python3.7
+  account: ${ssm:/amazon_account_id}
+  timeout: 900
+  reservedConcurrency: 1
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'sqs:SendMessage'
+      Resource:
+        - 'arn:aws:sqs:${self:provider.region}:${self:provider.account}:applications.fifo'
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:Query'
+      Resource:
+        - 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/Applications'
+    - Effect: 'Allow'
+      Action:
+        - 'ssm:GetParameter'
+      Resource:
+        - 'arn:aws:ssm:${self:provider.region}:${self:provider.account}:parameter/google_search_term'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+plugins:
+  - serverless-python-requirements
+
+functions:
+  search_google_play_store:
+    handler: handler.search_google_play_store
+    events:
+      - schedule: rate(1 hour)
+
+package:
+  include:
+    - ../commons/*

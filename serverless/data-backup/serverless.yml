@@ -1,0 +1,29 @@
+service: data-backup
+
+provider:
+  name: aws
+  runtime: python3.7
+  account: ${ssm:/amazon_account_id}
+  timeout: 900
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:CreateBackup'
+      Resource:
+        - 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/Applications'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+plugins:
+  - serverless-python-requirements
+functions:
+  data-backup:
+    handler: handler.backup_data
+    events:
+      - schedule: rate(24 hours)
+
+package:
+  include:
+    - ../commons/*

@@ -1,0 +1,41 @@
+service: application-enrichment
+
+provider:
+  name: aws
+  runtime: python3.6
+  account: ${ssm:/amazon_account_id}
+  timeout: 30
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'sqs:SendMessage'
+      Resource:
+        - 'arn:aws:sqs:${self:provider.region}:${self:provider.account}:twitter_notifications'
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:Query'
+        - 'dynamodb:PutItem'
+      Resource:
+        - 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/Applications'
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+plugins:
+  - serverless-python-requirements
+
+functions:
+  enrich_application:
+    handler: handler.enrich_application
+    layers:
+      - ${cf:selenium-layer-dev.SeleniumLayerExport}
+      - ${cf:selenium-layer-dev.ChromedriverLayerExport}
+    events:
+      - sqs:
+         arn: arn:aws:sqs:${self:provider.region}:${self:provider.account}:applications.fifo
+         batchSize: 1
+
+package:
+  include:
+    - ../commons/*
