@@ -3,3 +3,4 @@ beautifulsoup4
 pycountry==19.8.18
 boto3
 requests
+fuzzywuzzy==0.18.0

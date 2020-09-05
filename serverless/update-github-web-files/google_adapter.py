@@ -20,7 +20,7 @@ def get_user_entered_value(value):
 
 
 def _preprocess_headers(applications):
-    headers = [key for key in applications[0].get_dict().keys() if key != 'permissions']
+    headers = [key for key in applications[0].get_dict().keys() if key != 'permissions' or key != 'permissions_new']
 
     permissions = set()
     for i in range(len(applications)):

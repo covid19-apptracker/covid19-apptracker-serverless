@@ -58,6 +58,7 @@ def get_data_from_play_store(application_id):
         application = map_app_from_play_store(play_store_app_data)
     except Exception as err:
         logger.error("Error getting data from the play store: {0}".format(err))
+        raise err
 
     return application
 
@@ -88,9 +89,12 @@ def map_app_from_play_store(play_store_app_data):
         application.developer_url
     )
 
-    application.permissions = permissions_enricher.get_app_permissions(
+    app_permissions, app_permissions_new = permissions_enricher.get_app_permissions(
         application.id
     )
+
+    application.permissions = app_permissions
+    application.permissions_new = app_permissions_new
 
     return application
 

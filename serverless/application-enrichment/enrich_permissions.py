@@ -2,6 +2,7 @@ from selenium import webdriver
 import time
 from bs4 import BeautifulSoup
 from commons.logger import get_logger
+from commons.data_models import Permission
 
 logger = get_logger()
 
@@ -9,6 +10,7 @@ logger = get_logger()
 def parse_app_permissions(app_permission_element):
     permission_title = None
     permission_details = []
+    permission_details_new = []
 
     for app_permission_section in app_permission_element.children:
         if 'class' in app_permission_section.attrs:
@@ -19,8 +21,9 @@ def parse_app_permissions(app_permission_element):
             elif class_content == 'GLaCt':
                 # Details of the permissions
                 permission_details = parse_app_permission_details(app_permission_section.children)
+                permission_details_new = parse_app_permission_details_new(app_permission_section.children)
 
-    return permission_title, permission_details
+    return permission_title, permission_details, permission_details_new
 
 
 def parse_app_permission_details(app_permission_details):
@@ -29,6 +32,16 @@ def parse_app_permission_details(app_permission_details):
     for permission_detail in app_permission_details:
         if 'class' in permission_detail.attrs and permission_detail.attrs['class'][0] == 'BCMWSd':
             permission_details.append(permission_detail.text.capitalize())
+
+    return permission_details
+
+
+def parse_app_permission_details_new(app_permission_details):
+    permission_details = []
+
+    for permission_detail in app_permission_details:
+        if 'class' in permission_detail.attrs and permission_detail.attrs['class'][0] == 'BCMWSd':
+            permission_details.append(Permission(permission_detail.text.capitalize()))
 
     return permission_details
 
@@ -44,9 +57,10 @@ class PermissionsEnricher:
         app_id -- Play Store app id
         :rtype: dict
         """
-        logger.info('Collecting permissions from the following app:', app_id)
+        logger.info('Collecting permissions from the following app: ' + app_id)
 
         app_permissions = {}
+        app_permissions_new = {}
         app_details_url = 'https://play.google.com/store/apps/details?id=%s&hl=en_US' % app_id
 
         self.chrome_driver.get(app_details_url)
@@ -59,10 +73,11 @@ class PermissionsEnricher:
 
         app_permission_elements = soup.findAll('div', class_="itQHhe")
         for app_permission_element in app_permission_elements:
-            permission_title, permission_details = parse_app_permissions(app_permission_element)
+            permission_title, permission_details, permission_details_new = parse_app_permissions(app_permission_element)
             app_permissions[permission_title] = permission_details
+            app_permissions_new[permission_title] = permission_details_new
 
-        return app_permissions
+        return app_permissions, app_permissions_new
 
     def __init__(self):
         logger.info('Configuring chrome driver for accessing Google Play Store')
