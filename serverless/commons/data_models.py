@@ -57,7 +57,11 @@ class Application:
             'description': self.description,
             'app_store_url': self.app_store_url,
             'permissions': self.permissions,
-            'permissions_new': self.permissions_new,
+            'permissions_new': {
+                category: [permission.get_dict for permission in permissions ]
+                for category, permissions
+                in enumerate(self.permissions_new)
+            },
             'developer_url': self.developer_url,
             'available': self.available,
             'first_time_seen': self.first_time_seen

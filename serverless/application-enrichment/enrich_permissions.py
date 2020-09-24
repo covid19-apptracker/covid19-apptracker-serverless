@@ -18,6 +18,7 @@ def parse_app_permissions(app_permission_element):
             if class_content == 'wOeix':
                 # Title of the permissions
                 permission_title = app_permission_section.text
+
             elif class_content == 'GLaCt':
                 # Details of the permissions
                 permission_details = parse_app_permission_details(app_permission_section.children)
