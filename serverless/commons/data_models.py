@@ -58,8 +58,8 @@ class Application:
             'app_store_url': self.app_store_url,
             'permissions': self.permissions,
             'permissions_new': {
-                category: [permission.get_dict() for permission in permissions ]
-                for category, permissions
+                category: [permission.get_dict() for permission in self.permissions_new[category]]
+                for index, category
                 in enumerate(self.permissions_new)
             },
             'developer_url': self.developer_url,
@@ -78,8 +78,8 @@ class Application:
         }
 
         extended_version_dict['permissions_new'] = {
-            category: [permission.get_dict() for permission in permissions ]
-            for category, permissions
+            category: [permission.get_dict() for permission in self.permissions_new[category]]
+            for index, category
             in enumerate(self.permissions_new)
         }
 
