@@ -58,7 +58,7 @@ class Application:
             'app_store_url': self.app_store_url,
             'permissions': self.permissions,
             'permissions_new': {
-                category: [permission.get_dict for permission in permissions ]
+                category: [permission.get_dict() for permission in permissions ]
                 for category, permissions
                 in enumerate(self.permissions_new)
             },
@@ -77,9 +77,11 @@ class Application:
             key: value for key, value in self.get_dict().items() if key in extended_version_fields
         }
 
-        extended_version_dict['permissions_new'] = [
-            permission.get_dict() for permission in self.permissions_new
-        ]
+        extended_version_dict['permissions_new'] = {
+            category: [permission.get_dict() for permission in permissions ]
+            for category, permissions
+            in enumerate(self.permissions_new)
+        }
 
         return json.dumps(extended_version_dict, indent=2)
 
