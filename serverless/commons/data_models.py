@@ -74,7 +74,8 @@ class Application:
 
     def get_extended_version_json(self):
         extended_version_dict = {
-            key: value for key, value in self.get_dict().items() if key in extended_version_fields
+            key: value for key, value in self.get_dict().items()
+            if key in extended_version_fields and key != 'permissions_new '
         }
 
         extended_version_dict['permissions_new'] = {
@@ -96,7 +97,11 @@ class Application:
         self.description = dictionary.get('description', '')
         self.app_store_url = dictionary.get('app_store_url', '')
         self.permissions = dictionary.get('permissions', [])
-        self.permissions_new = dictionary.get('permissions_new', [])
+        self.permissions_new = {
+            category: [Permission(permission['permissionName'], permission['isDangerous'] == 1) for permission in permissions]
+            for category, permissions
+            in dictionary.get('permissions_new', {}).items()
+        }
         self.developer_url = dictionary.get('developer_url', '')
         self.available = dictionary.get('available', True)
         self.first_time_seen = dictionary.get('first_time_seen', '')
@@ -144,6 +149,10 @@ class Permission:
     def __init__(self, name):
         self.name = name
         self.dangerous = self.__get_dangerous_flag()
+
+    def __init__(self, name, dangerous):
+        self.name = name
+        self.dangerous = dangerous
 
     def get_dict(self):
         return {
