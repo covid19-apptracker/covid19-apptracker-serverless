@@ -5,7 +5,7 @@ from fuzzywuzzy import fuzz
 
 short_version_fields = ['id', 'title', 'icon_url', 'developer_id', 'downloads', 'country', 'updated_date']
 extended_version_fields = short_version_fields + ['description', 'app_store_url', 'developer_url', 'permissions',
-                                                  'available', 'first_time_seen']
+                                                  'available', 'first_time_seen', 'privacy_policy']
 dangerous_permissions_terms = [
     "precise location (gps and network-based)",
     "approximate location (network-based)",
@@ -41,6 +41,7 @@ class Application:
     developer_url = None
     available = True
     first_time_seen = None
+    privacy_policy = None
 
     def get_dynamodb_item(self):
         return {key: value for key, value in self.get_dict().items() if (value or key == 'available')}
@@ -64,7 +65,8 @@ class Application:
             },
             'developer_url': self.developer_url,
             'available': self.available,
-            'first_time_seen': self.first_time_seen
+            'first_time_seen': self.first_time_seen,
+            'privacy_policy': self.privacy_policy
         }
 
     def get_short_version_dict(self):
@@ -105,6 +107,7 @@ class Application:
         self.developer_url = dictionary.get('developer_url', '')
         self.available = dictionary.get('available', True)
         self.first_time_seen = dictionary.get('first_time_seen', '')
+        self.privacy_policy = dictionary.get('privacy_policy', '')
 
     def __init__(self, app_id=None):
         self.id = app_id
@@ -137,6 +140,8 @@ class Application:
         if self.country != other.country:
             return False
         if self.first_time_seen != other.first_time_seen:
+            return False
+        if self.privacy_policy != other.privacy_policy:
             return False
 
         return True

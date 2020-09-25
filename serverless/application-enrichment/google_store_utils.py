@@ -1,5 +1,6 @@
 from selenium import webdriver
 import time
+import re
 from bs4 import BeautifulSoup
 from commons.logger import get_logger
 from commons.data_models import Permission
@@ -47,38 +48,57 @@ def parse_app_permission_details_new(app_permission_details):
     return permission_details
 
 
-class PermissionsEnricher:
+class GoogleStoreUtils:
     chrome_driver = None
 
-    def get_app_permissions(self, app_id):
-        """Scrape App permissions from the Play Store app detail page to our model.
-        Returns a dictionary with the permissions
+    def enrich_app_information(self, application):
+        """Enrich App information from the Play Store app detail page to our model.
 
         Keyword arguments:
-        app_id -- Play Store app id
-        :rtype: dict
+        application -- Application instance
         """
-        logger.info('Collecting permissions from the following app: ' + app_id)
+        logger.info('Access google play store app details: ' + application.id)
+
+        app_details_url = 'https://play.google.com/store/apps/details?id=%s&hl=en_US' % application.id
+        self.chrome_driver.get(app_details_url)
+
+        self.enrich_privacy_policy(application)
+        self.enrich_permissions(application)
+
+    def enrich_privacy_policy(self, application):
+        logger.info('Collecting privacy policy')
+
+        page_source = self.chrome_driver.page_source
+
+        soup = BeautifulSoup(page_source, 'html.parser')
+        privacy_policy_element = soup.find('div', text="Privacy Policy")
+
+        if not privacy_policy_element:
+            return
+
+        match = re.search(r'href=[\'"]?([^\'" >]+)', str(privacy_policy_element))
+        if match:
+            application.privacy_policy = match.group(1)
+
+    def enrich_permissions(self, application):
+        logger.info('Collecting permission')
 
         app_permissions = {}
         app_permissions_new = {}
-        app_details_url = 'https://play.google.com/store/apps/details?id=%s&hl=en_US' % app_id
 
-        self.chrome_driver.get(app_details_url)
         self.chrome_driver.find_element_by_link_text('View details').click()
-
         time.sleep(5)
-
         page_source = self.chrome_driver.page_source
         soup = BeautifulSoup(page_source, 'html.parser')
-
         app_permission_elements = soup.findAll('div', class_="itQHhe")
+
         for app_permission_element in app_permission_elements:
             permission_title, permission_details, permission_details_new = parse_app_permissions(app_permission_element)
             app_permissions[permission_title] = permission_details
             app_permissions_new[permission_title] = permission_details_new
 
-        return app_permissions, app_permissions_new
+        application.permissions = app_permissions
+        application.permissions_new = app_permissions_new
 
     def __init__(self):
         logger.info('Configuring chrome driver for accessing Google Play Store')
