@@ -3,7 +3,8 @@ import re
 from enum import Enum
 from fuzzywuzzy import fuzz
 
-short_version_fields = ['id', 'title', 'icon_url', 'developer_id', 'downloads', 'country', 'updated_date']
+short_version_fields = ['id', 'title', 'icon_url', 'developer_id', 'downloads', 'country', 'updated_date',
+                        'dangerous_permissions_count']
 extended_version_fields = short_version_fields + ['description', 'app_store_url', 'developer_url', 'permissions',
                                                   'available', 'first_time_seen', 'privacy_policy']
 dangerous_permissions_terms = [
@@ -38,6 +39,7 @@ class Application:
     app_store_url = None
     permissions = None
     permissions_new = None
+    dangerous_permissions_count = 0
     developer_url = None
     available = True
     first_time_seen = None
@@ -57,6 +59,7 @@ class Application:
             'country': self.country,
             'description': self.description,
             'app_store_url': self.app_store_url,
+            'dangerous_permissions_count': int(self.dangerous_permissions_count),
             'permissions': self.permissions,
             'permissions_new': {
                 category: [permission.get_dict() for permission in self.permissions_new[category]]
@@ -77,7 +80,7 @@ class Application:
     def get_extended_version_json(self):
         extended_version_dict = {
             key: value for key, value in self.get_dict().items()
-            if key in extended_version_fields and key != 'permissions_new '
+            if key in extended_version_fields
         }
 
         extended_version_dict['permissions_new'] = {
@@ -108,6 +111,7 @@ class Application:
         self.available = dictionary.get('available', True)
         self.first_time_seen = dictionary.get('first_time_seen', '')
         self.privacy_policy = dictionary.get('privacy_policy', '')
+        self.dangerous_permissions_count = dictionary.get('dangerous_permissions_count', 0)
 
     def __init__(self, app_id=None):
         self.id = app_id
@@ -143,6 +147,8 @@ class Application:
             return False
         if self.privacy_policy != other.privacy_policy:
             return False
+        if self.dangerous_permissions_count != other.dangerous_permissions_count:
+            return False
 
         return True
 
@@ -151,13 +157,12 @@ class Permission:
     name = ""
     dangerous = False
 
-    def __init__(self, name):
+    def __init__(self, name, dangerous=None):
         self.name = name
-        self.dangerous = self.__get_dangerous_flag()
-
-    def __init__(self, name, dangerous):
-        self.name = name
-        self.dangerous = dangerous
+        if dangerous:
+            self.dangerous = dangerous
+        else:
+            self.dangerous = self.__get_dangerous_flag()
 
     def get_dict(self):
         return {

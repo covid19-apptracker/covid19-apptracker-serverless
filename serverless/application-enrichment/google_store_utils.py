@@ -100,6 +100,11 @@ class GoogleStoreUtils:
         application.permissions = app_permissions
         application.permissions_new = app_permissions_new
 
+        for category, permissions in app_permissions_new.items():
+            for permission in permissions:
+                if permission.dangerous:
+                    application.dangerous_permissions_count = application.dangerous_permissions_count + 1
+
     def __init__(self):
         logger.info('Configuring chrome driver for accessing Google Play Store')
         # Source: https://hackernoon.com/running-selenium-and-headless-chrome-on-aws-lambda-layers-python-3-6-bd810503c6c3
