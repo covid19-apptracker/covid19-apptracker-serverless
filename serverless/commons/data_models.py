@@ -182,6 +182,18 @@ class Permission:
 
         return False
 
+    def __eq__(self, other):
+        if not isinstance(other, Permission):
+            # don't attempt to compare against unrelated types
+            return False
+
+        if self.name != other.name:
+            return False
+        if self.dangerous != other.dangerous:
+            return False
+
+        return True
+
 
 class TwitterNotificationType(Enum):
     NEW = 1

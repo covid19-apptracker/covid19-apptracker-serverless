@@ -110,9 +110,9 @@ class AwsSesClient:
     CHARSET = "UTF-8"
     SENDER = "updates@covid19apptracker.org"
     RECIPIENT = "info@covid19apptracker.org"
-    CONFIGURATION_SET = "ConfigSet"
 
     def send_email(self, subject, body):
+        logger.info(f"Sending email, subject: {subject}")
         try:
             # Provide the contents of the email.
             response = self.client.send_email(
@@ -138,7 +138,6 @@ class AwsSesClient:
                     },
                 },
                 Source=self.SENDER,
-                ConfigurationSetName=self.CONFIGURATION_SET,
             )
         except ClientError as e:
             logger.error(e.response['Error']['Message'])
@@ -147,4 +146,4 @@ class AwsSesClient:
             logger.info(response['MessageId'])
 
     def __init__(self):
-        self.client = boto3.client('ses')
+        self.client = boto3.client('ses', region_name='us-west-2')
