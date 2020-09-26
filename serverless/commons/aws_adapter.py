@@ -3,6 +3,7 @@ import json
 import datetime
 import os
 from boto3.dynamodb.conditions import Key
+from botocore.exceptions import ClientError
 from commons.data_models import Application
 from commons.logger import get_logger
 
@@ -21,7 +22,7 @@ class AwsDynamoDbClient:
         )
 
         if len(response['Items']) == 1:
-            logger.info('App found in the database:'+ app_id)
+            logger.info('App found in the database:' + app_id)
             application = Application(app_id)
             application.enrich_from_dictionary(response['Items'][0])
             return application
@@ -102,3 +103,48 @@ class AwsSsmClient:
 
     def __init__(self):
         self.client = boto3.client('ssm')
+
+
+class AwsSesClient:
+    client = None
+    CHARSET = "UTF-8"
+    SENDER = "updates@covid19apptracker.org"
+    RECIPIENT = "info@covid19apptracker.org"
+    CONFIGURATION_SET = "ConfigSet"
+
+    def send_email(self, subject, body):
+        try:
+            # Provide the contents of the email.
+            response = self.client.send_email(
+                Destination={
+                    'ToAddresses': [
+                        self.RECIPIENT,
+                    ],
+                },
+                Message={
+                    'Body': {
+                        # 'Html': {
+                        #     'Charset': self.CHARSET,
+                        #     'Data': BODY_HTML,
+                        # },
+                        'Text': {
+                            'Charset': self.CHARSET,
+                            'Data': body,
+                        },
+                    },
+                    'Subject': {
+                        'Charset': self.CHARSET,
+                        'Data': subject,
+                    },
+                },
+                Source=self.SENDER,
+                ConfigurationSetName=self.CONFIGURATION_SET,
+            )
+        except ClientError as e:
+            logger.error(e.response['Error']['Message'])
+        else:
+            logger.info("Email sent! Message ID:"),
+            logger.info(response['MessageId'])
+
+    def __init__(self):
+        self.client = boto3.client('ses')
