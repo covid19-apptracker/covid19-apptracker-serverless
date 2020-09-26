@@ -4,10 +4,12 @@ from gh_adapter import GitHubAdapter
 from google_adapter import GoogleAdapter
 from commons.aws_adapter import AwsDynamoDbClient
 from commons.aws_adapter import AwsSecretsManagerClient
+from commons.aws_adapter import AwsSesClient
 from commons.logger import get_logger
 
 dynamodb = AwsDynamoDbClient()
 secretsmanager = AwsSecretsManagerClient()
+email_client = AwsSesClient()
 github_adapter = GitHubAdapter(secretsmanager.get_secret('github_token'))
 googleAdapter = GoogleAdapter(json.loads(secretsmanager.get_secret('google_api')))
 logger = get_logger()
@@ -29,10 +31,11 @@ def update_github_files(event, context=None):
 
         sort_permissions(application)
         if application_from_github is not None:
+            send_new_app_email(application)
             sort_permissions(application_from_github)
 
         if application_from_github != application:
-            # Update data on github
+            send_update_app_email(application_from_github, application)
             github_adapter.update_app_details(application)
             tag_new_release = True
 
@@ -73,3 +76,15 @@ def sort_permissions(application):
 
     for permission, permission_list in application.permissions.items():
         permission_list.sort()
+
+
+def send_update_app_email(application_from_github, application):
+    subject = f"Application updated {application.id}"
+    body = application.get_extended_version_json()
+    email_client.send_email(subject, body)
+
+
+def send_new_app_email(application):
+    subject = f"New application found {application.id}"
+    body = application.get_extended_version_json()
+    email_client.send_email(subject, body)
