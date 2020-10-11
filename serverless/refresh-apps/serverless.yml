@@ -27,6 +27,7 @@ functions:
     handler: handler.refresh_apps
     events:
       - schedule: rate(24 hours)
+    package: {}
 
 package:
   include:

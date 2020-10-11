@@ -82,12 +82,13 @@ def sort_permissions(application):
         return
 
     for permission, permission_list in application.permissions.items():
-        permission_list.sort()
+        permission_list.sort(key=lambda x: x.name)
 
 
 def send_app_updates_email(new_applications, updated_applications):
     if len(new_applications) == 0 and len(updated_applications) == 0:
         logger.info('Skipping digest email, no updates')
+        return
 
     subject = f"Covid19AppTracker updates digest"
 
@@ -107,12 +108,12 @@ def send_app_updates_email(new_applications, updated_applications):
         application_from_github = application_update[0]
         application = application_update[1]
 
-        if set(application_from_github.permissions_new) != set(application.permissions_new):
+        if set(application_from_github.permissions) != set(application.permissions):
             logger.info(f'Adding app permissions update to digest {application.id}')
             body = body + f'Application ID: {application.id}\n'
             body = body + f'Previous Dangerous count permissions: {application.dangerous_permissions_count}\n'
             body = body + f'New Dangerous count permissions: {application_from_github.dangerous_permissions_count}\n'
-            body = body + f'Previous permissions:\n{json.dumps(application_from_github.permissions_new, indent=2)}\n'
-            body = body + f'New permissions:\n{json.dumps(application.permissions_new, indent=2)}\n'
+            body = body + f'Previous permissions:\n{json.dumps(application_from_github.permissions, indent=2)}\n'
+            body = body + f'New permissions:\n{json.dumps(application.permissions, indent=2)}\n'
 
     email_client.send_email(subject, body)

@@ -35,6 +35,7 @@ functions:
     handler: handler.search_google_play_store
     events:
       - schedule: rate(1 hour)
+    package: {}
 
 package:
   include:
