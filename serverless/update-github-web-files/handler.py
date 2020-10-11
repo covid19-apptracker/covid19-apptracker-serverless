@@ -92,28 +92,42 @@ def send_app_updates_email(new_applications, updated_applications):
 
     subject = f"Covid19AppTracker updates digest"
 
+    new_applications_body = ''
+    if len(new_applications) != 0:
+        new_applications_body = new_applications_body + f'New applications:\n' \
+               f'\n'
+
+        for application in new_applications:
+            logger.info(f'Adding new app to digest {application.id}')
+            new_applications_body = new_applications_body + f'{application.get_extended_version_json()}\n\n'
+    else:
+        logger.info('Skipping new applications in digest email, no updates')
+
+    updated_applications_body = ''
+    if len(updated_applications_body) != 0:
+        updated_applications_body = updated_applications_body + f'\n\nUpdated applications:\n\n'
+
+        for application_update in updated_applications:
+            application_from_github = application_update[0]
+            application = application_update[1]
+
+            if set(application_from_github.permissions) != set(application.permissions):
+                logger.info(f'Adding app permissions update to digest {application.id}')
+                updated_applications_body = updated_applications_body + f'Application ID: {application.id}\n'
+                updated_applications_body = updated_applications_body + f'Previous Dangerous count permissions: {application.dangerous_permissions_count}\n'
+                updated_applications_body = updated_applications_body + f'New Dangerous count permissions: {application_from_github.dangerous_permissions_count}\n'
+                updated_applications_body = updated_applications_body + f'Previous permissions:\n{json.dumps(application_from_github.permissions, indent=2)}\n'
+                updated_applications_body = updated_applications_body + f'New permissions:\n{json.dumps(application.permissions, indent=2)}\n'
+
+    if len(new_applications_body) == 0 and len(updated_applications_body) == 0:
+        logger.info('Skipping digest email, no updates')
+        return
+
     body = f'Digest {datetime.now().strftime("%m/%d/%Y")}' \
            f'\n' \
            f'\n' \
-           f'New applications:\n' \
-           f'\n'
-
-    for application in new_applications:
-        logger.info(f'Adding new app to digest {application.id}')
-        body = body + f'{application.get_extended_version_json()}\n\n'
-
-    body = body + f'\n\nUpdated applications:\n\n'
-
-    for application_update in updated_applications:
-        application_from_github = application_update[0]
-        application = application_update[1]
-
-        if set(application_from_github.permissions) != set(application.permissions):
-            logger.info(f'Adding app permissions update to digest {application.id}')
-            body = body + f'Application ID: {application.id}\n'
-            body = body + f'Previous Dangerous count permissions: {application.dangerous_permissions_count}\n'
-            body = body + f'New Dangerous count permissions: {application_from_github.dangerous_permissions_count}\n'
-            body = body + f'Previous permissions:\n{json.dumps(application_from_github.permissions, indent=2)}\n'
-            body = body + f'New permissions:\n{json.dumps(application.permissions, indent=2)}\n'
+           f'{new_applications_body}\n' \
+           f'\n' \
+           f'{updated_applications_body}'
 
     email_client.send_email(subject, body)
