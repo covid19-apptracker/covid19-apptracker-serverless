@@ -63,7 +63,10 @@ def _preprocess_applications(headers, applications):
                     if application_permission is None or len(application_permissions) == 0:
                         pass
                     else:
-                        permission_value = permission_sub_key in application_permission
+                        for permission in application_permission:
+                            if permission_sub_key == permission['permissionName']:
+                                permission_value = True
+                                break
                 row_values.append(get_user_entered_value(permission_value))
 
         application_requests.append({
