@@ -11,7 +11,7 @@
 * Run: 
 `serverless create --template aws-python3 --name enrich-country --path enrich-country`
 
-## Statis Security Analsys
+## Static Security Analysis
 
 Run Bandit
 

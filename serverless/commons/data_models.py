@@ -1,8 +1,30 @@
 import json
+import re
 from enum import Enum
+from fuzzywuzzy import fuzz
 
-short_version_fields = ['id', 'title', 'icon_url', 'developer_id', 'downloads', 'country', 'updated_date']
-extended_version_fields = short_version_fields + ['description', 'app_store_url', 'developer_url', 'permissions', 'available', 'first_time_seen']
+short_version_fields = ['id', 'title', 'icon_url', 'developer_id', 'downloads', 'country', 'updated_date',
+                        'dangerous_permissions_count']
+extended_version_fields = short_version_fields + ['description', 'app_store_url', 'developer_url', 'permissions',
+                                                  'available', 'first_time_seen', 'privacy_policy']
+dangerous_permissions_terms = [
+    "precise location (gps and network-based)",
+    "approximate location (network-based)",
+    "read the contents of your usb storage",
+    "modify or delete the contents of your usb storage",
+    "take pictures and videos",
+    "read phone status and identity",
+    "directly call phone numbers",
+    "record audio",
+    "find accounts on the device",
+    "add or modify calendar events and send email to guests without owners' knowledge",
+    "read calendar events plus confidential information",
+    "body sensors (like heart rate monitors)",
+    "modify your contacts",
+    "use accounts on the device",
+    "send sms messages",
+    "read your contacts"
+]
 
 
 class Application:
@@ -16,9 +38,12 @@ class Application:
     description = None
     app_store_url = None
     permissions = None
+    permissions_new = None
+    dangerous_permissions_count = 0
     developer_url = None
     available = True
     first_time_seen = None
+    privacy_policy = None
 
     def get_dynamodb_item(self):
         return {key: value for key, value in self.get_dict().items() if (value or key == 'available')}
@@ -34,10 +59,17 @@ class Application:
             'country': self.country,
             'description': self.description,
             'app_store_url': self.app_store_url,
+            'dangerous_permissions_count': int(self.dangerous_permissions_count),
             'permissions': self.permissions,
+            'permissions_new': {
+                category: [permission.get_dict() for permission in self.permissions_new[category]]
+                for index, category
+                in enumerate(self.permissions_new)
+            },
             'developer_url': self.developer_url,
             'available': self.available,
-            'first_time_seen': self.first_time_seen
+            'first_time_seen': self.first_time_seen,
+            'privacy_policy': self.privacy_policy
         }
 
     def get_short_version_dict(self):
@@ -45,12 +77,16 @@ class Application:
             key: value for key, value in self.get_dict().items() if key in short_version_fields
         }
 
-    def get_short_version_json(self):
-        return json.dumps(self.get_short_version_dict(), indent=2)
-
     def get_extended_version_json(self):
         extended_version_dict = {
-            key: value for key, value in self.get_dict().items() if key in extended_version_fields
+            key: value for key, value in self.get_dict().items()
+            if key in extended_version_fields
+        }
+
+        extended_version_dict['permissions_new'] = {
+            category: [permission.get_dict() for permission in self.permissions_new[category]]
+            for index, category
+            in enumerate(self.permissions_new)
         }
 
         return json.dumps(extended_version_dict, indent=2)
@@ -66,9 +102,16 @@ class Application:
         self.description = dictionary.get('description', '')
         self.app_store_url = dictionary.get('app_store_url', '')
         self.permissions = dictionary.get('permissions', [])
+        self.permissions_new = {
+            category: [Permission(permission['permissionName'], permission['isDangerous'] == 1) for permission in permissions]
+            for category, permissions
+            in dictionary.get('permissions_new', {}).items()
+        }
         self.developer_url = dictionary.get('developer_url', '')
         self.available = dictionary.get('available', True)
         self.first_time_seen = dictionary.get('first_time_seen', '')
+        self.privacy_policy = dictionary.get('privacy_policy', '')
+        self.dangerous_permissions_count = dictionary.get('dangerous_permissions_count', 0)
 
     def __init__(self, app_id=None):
         self.id = app_id
@@ -94,14 +137,50 @@ class Application:
             return False
         if set(self.permissions) != set(other.permissions):
             return False
+        if set(self.permissions_new) != set(other.permissions_new):
+            return False
         if self.developer_url != other.developer_url:
             return False
         if self.country != other.country:
             return False
         if self.first_time_seen != other.first_time_seen:
             return False
+        if self.privacy_policy != other.privacy_policy:
+            return False
+        if self.dangerous_permissions_count != other.dangerous_permissions_count:
+            return False
 
         return True
+
+
+class Permission:
+    name = ""
+    dangerous = False
+
+    def __init__(self, name, dangerous=None):
+        self.name = name
+        if dangerous:
+            self.dangerous = dangerous
+        else:
+            self.dangerous = self.__get_dangerous_flag()
+
+    def get_dict(self):
+        return {
+            'permissionName': self.name,
+            'isDangerous': 1 if self.dangerous else 0
+        }
+
+    def __get_dangerous_flag(self):
+        """
+        Based on Google permission categorization https://developer.android.com/reference/android/Manifest.permission
+        :return: boolean, dangerous permission flag
+        """
+
+        for dangerous_permissions_term in dangerous_permissions_terms:
+            if fuzz.partial_ratio(dangerous_permissions_term.lower(), self.name.lower()) >= 80:
+                return True
+
+        return False
 
 
 class TwitterNotificationType(Enum):

@@ -44,6 +44,7 @@ functions:
     handler: handler.update_github_files
     events:
       - schedule: rate(12 hours)
+    package: {}
 
 package:
   include:

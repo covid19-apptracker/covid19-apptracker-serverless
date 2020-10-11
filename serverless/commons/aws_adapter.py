@@ -15,21 +15,21 @@ class AwsDynamoDbClient:
     dynamodb_client = None
 
     def get_by_app_id(self, app_id):
-        logger.info('Retrieving app from the database:', app_id)
+        logger.info('Retrieving app from the database: ' + app_id)
         response = self.table.query(
             KeyConditionExpression=Key('id').eq(app_id)
         )
 
         if len(response['Items']) == 1:
-            logger.info('App found in the database:', app_id)
+            logger.info('App found in the database:'+ app_id)
             application = Application(app_id)
             application.enrich_from_dictionary(response['Items'][0])
             return application
-        logger.info('App not found in the database:', app_id)
+        logger.info('App not found in the database: ' + app_id)
         return None
 
     def store_app(self, application):
-        logger.info('Storing the following app in the database:', application.id)
+        logger.info('Storing the following app in the database: ' + application.id)
         self.table.put_item(
             Item=application.get_dynamodb_item()
         )
@@ -50,7 +50,7 @@ class AwsDynamoDbClient:
         logger.info('Creating backup of the database')
         backup_name = table_name + '_' + datetime.date.today().strftime('%Y-%m-%d')
         self.dynamodb_client.create_backup(TableName=table_name, BackupName=backup_name)
-        logger.info('Backup finished: ', backup_name)
+        logger.info('Backup finished: ' + backup_name)
 
     def __init__(self):
         dynamodb = boto3.resource("dynamodb", region_name='us-west-1')

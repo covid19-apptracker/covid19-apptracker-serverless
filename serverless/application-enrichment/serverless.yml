@@ -35,6 +35,7 @@ functions:
       - sqs:
          arn: arn:aws:sqs:${self:provider.region}:${self:provider.account}:applications.fifo
          batchSize: 1
+    package: {}
 
 package:
   include:

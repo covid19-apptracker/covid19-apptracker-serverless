@@ -8,9 +8,9 @@ from commons.data_models import Application
 from commons.logger import get_logger
 
 import enrich_country
-import enrich_permissions
+from google_store_utils import GoogleStoreUtils
 
-permissions_enricher = enrich_permissions.PermissionsEnricher()
+google_store_utils = GoogleStoreUtils()
 dynamodb = AwsDynamoDbClient()
 logger = get_logger()
 
@@ -58,6 +58,7 @@ def get_data_from_play_store(application_id):
         application = map_app_from_play_store(play_store_app_data)
     except Exception as err:
         logger.error("Error getting data from the play store: {0}".format(err))
+        raise err
 
     return application
 
@@ -88,9 +89,7 @@ def map_app_from_play_store(play_store_app_data):
         application.developer_url
     )
 
-    application.permissions = permissions_enricher.get_app_permissions(
-        application.id
-    )
+    google_store_utils.enrich_app_information(application)
 
     return application
 
