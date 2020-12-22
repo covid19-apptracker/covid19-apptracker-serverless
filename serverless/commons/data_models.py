@@ -43,6 +43,9 @@ class Application:
     available = True
     first_time_seen = None
     privacy_policy = None
+    # Versioning
+    version = None
+    version_date = None
 
     def get_dynamodb_item(self):
         return {key: value for key, value in self.get_dict().items() if (value or key == 'available')}
@@ -69,6 +72,15 @@ class Application:
             'first_time_seen': self.first_time_seen,
             'privacy_policy': self.privacy_policy
         }
+
+    def get_dynamodb_versioning_item(self):
+        return {key: value for key, value in self.get_versioning_dict().items() if (value or key == 'available')}
+
+    def get_versioning_dict(self):
+        return self.get_dict().update({
+            'version': self.version,
+            'version_date': self.version_date
+        })
 
     def get_short_version_dict(self):
         return {

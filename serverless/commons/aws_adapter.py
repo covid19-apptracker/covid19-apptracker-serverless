@@ -13,6 +13,7 @@ logger = get_logger()
 
 class AwsDynamoDbClient:
     table = None
+    version_table = None
     dynamodb_client = None
 
     def get_by_app_id(self, app_id):
@@ -33,6 +34,12 @@ class AwsDynamoDbClient:
         logger.info('Storing the following app in the database: ' + application.id)
         self.table.put_item(
             Item=application.get_dynamodb_item()
+        )
+
+    def store_app_version(self, application):
+        logger.info('Storing the following app version in the database: ' + application.id + ' ' + application.version)
+        self.version_table.put_item(
+            Item=application.get_dynamodb_versioning_item()
         )
 
     def get_all_apps(self):
@@ -56,6 +63,7 @@ class AwsDynamoDbClient:
     def __init__(self):
         dynamodb = boto3.resource("dynamodb", region_name='us-west-1')
         self.table = dynamodb.Table('Applications')
+        self.version_table = dynamodb.Table('ApplicationsVersion')
         self.dynamodb_client = boto3.client('dynamodb')
 
 
