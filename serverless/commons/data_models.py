@@ -38,7 +38,6 @@ class Application:
     description = None
     app_store_url = None
     permissions = None
-    permissions_new = None
     dangerous_permissions_count = 0
     developer_url = None
     available = True
@@ -60,11 +59,10 @@ class Application:
             'description': self.description,
             'app_store_url': self.app_store_url,
             'dangerous_permissions_count': int(self.dangerous_permissions_count),
-            'permissions': self.permissions,
-            'permissions_new': {
-                category: [permission.get_dict() for permission in self.permissions_new[category]]
+            'permissions': {
+                category: [permission.get_dict() for permission in self.permissions[category]]
                 for index, category
-                in enumerate(self.permissions_new)
+                in enumerate(self.permissions)
             },
             'developer_url': self.developer_url,
             'available': self.available,
@@ -83,10 +81,10 @@ class Application:
             if key in extended_version_fields
         }
 
-        extended_version_dict['permissions_new'] = {
-            category: [permission.get_dict() for permission in self.permissions_new[category]]
+        extended_version_dict['permissions'] = {
+            category: [permission.get_dict() for permission in self.permissions[category]]
             for index, category
-            in enumerate(self.permissions_new)
+            in enumerate(self.permissions)
         }
 
         return json.dumps(extended_version_dict, indent=2)
@@ -101,11 +99,10 @@ class Application:
         self.country = dictionary.get('country', '')
         self.description = dictionary.get('description', '')
         self.app_store_url = dictionary.get('app_store_url', '')
-        self.permissions = dictionary.get('permissions', [])
-        self.permissions_new = {
+        self.permissions = {
             category: [Permission(permission['permissionName'], permission['isDangerous'] == 1) for permission in permissions]
             for category, permissions
-            in dictionary.get('permissions_new', {}).items()
+            in dictionary.get('permissions', {}).items()
         }
         self.developer_url = dictionary.get('developer_url', '')
         self.available = dictionary.get('available', True)
@@ -136,8 +133,6 @@ class Application:
         if self.description != other.description:
             return False
         if set(self.permissions) != set(other.permissions):
-            return False
-        if set(self.permissions_new) != set(other.permissions_new):
             return False
         if self.developer_url != other.developer_url:
             return False
@@ -181,6 +176,18 @@ class Permission:
                 return True
 
         return False
+
+    def __eq__(self, other):
+        if not isinstance(other, Permission):
+            # don't attempt to compare against unrelated types
+            return False
+
+        if self.name != other.name:
+            return False
+        if self.dangerous != other.dangerous:
+            return False
+
+        return True
 
 
 class TwitterNotificationType(Enum):

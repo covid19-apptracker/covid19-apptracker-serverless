@@ -20,19 +20,19 @@ def get_user_entered_value(value):
 
 
 def _preprocess_headers(applications):
-    headers = [key for key in applications[0].get_dict().keys() if (key != 'permissions' and key != 'permissions_new')]
+    headers = [key for key in applications[0].get_dict().keys() if (key != 'permissions')]
 
-    permissions = set()
+    permissions_set = set()
     for i in range(len(applications)):
         application_permissions = applications[i].get_dict()['permissions']
         if application_permissions is None or len(application_permissions) == 0:
             continue
-        for permission_key, permission_list in list(application_permissions.items()):
-            [permissions.add(permission_key + ' - ' + permission) for permission in permission_list]
+        for category, permissions in application_permissions.items():
+            [permissions_set.add(category + ' - ' + permission['permissionName']) for permission in permissions]
 
-    permissions = list(permissions)
-    permissions.sort()
-    headers.extend(permissions)
+    permissions_list = list(permissions_set)
+    permissions_list.sort()
+    headers.extend(permissions_list)
 
     return headers
 
@@ -63,7 +63,10 @@ def _preprocess_applications(headers, applications):
                     if application_permission is None or len(application_permissions) == 0:
                         pass
                     else:
-                        permission_value = permission_sub_key in application_permission
+                        for permission in application_permission:
+                            if permission_sub_key == permission['permissionName']:
+                                permission_value = True
+                                break
                 row_values.append(get_user_entered_value(permission_value))
 
         application_requests.append({

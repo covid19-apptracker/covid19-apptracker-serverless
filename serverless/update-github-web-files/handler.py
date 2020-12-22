@@ -1,13 +1,16 @@
 import json
+from datetime import datetime
 
 from gh_adapter import GitHubAdapter
 from google_adapter import GoogleAdapter
 from commons.aws_adapter import AwsDynamoDbClient
 from commons.aws_adapter import AwsSecretsManagerClient
+from commons.aws_adapter import AwsSesClient
 from commons.logger import get_logger
 
 dynamodb = AwsDynamoDbClient()
 secretsmanager = AwsSecretsManagerClient()
+email_client = AwsSesClient()
 github_adapter = GitHubAdapter(secretsmanager.get_secret('github_token'))
 googleAdapter = GoogleAdapter(json.loads(secretsmanager.get_secret('google_api')))
 logger = get_logger()
@@ -15,6 +18,8 @@ logger = get_logger()
 
 def update_github_files(event, context=None):
     tag_new_release = False
+    new_applications = []
+    updated_applications = []
     applications = dynamodb.get_all_apps()
 
     applications.sort(key=lambda x: x.id)
@@ -30,9 +35,11 @@ def update_github_files(event, context=None):
         sort_permissions(application)
         if application_from_github is not None:
             sort_permissions(application_from_github)
+        else:
+            new_applications.append(application)
 
         if application_from_github != application:
-            # Update data on github
+            updated_applications.append((application_from_github, application))
             github_adapter.update_app_details(application)
             tag_new_release = True
 
@@ -66,10 +73,61 @@ def update_github_files(event, context=None):
     logger.info('Updating Google Spreadsheet')
     googleAdapter.update_spreadsheet(applications)
 
+    logger.info('Sending digest email')
+    send_app_updates_email(new_applications, updated_applications)
+
 
 def sort_permissions(application):
     if application.permissions is None or not application.permissions:
         return
 
     for permission, permission_list in application.permissions.items():
-        permission_list.sort()
+        permission_list.sort(key=lambda x: x.name)
+
+
+def send_app_updates_email(new_applications, updated_applications):
+    if len(new_applications) == 0 and len(updated_applications) == 0:
+        logger.info('Skipping digest email, no updates')
+        return
+
+    subject = f"Covid19AppTracker updates digest"
+
+    new_applications_body = ''
+    if len(new_applications) != 0:
+        new_applications_body = new_applications_body + f'New applications:\n' \
+               f'\n'
+
+        for application in new_applications:
+            logger.info(f'Adding new app to digest {application.id}')
+            new_applications_body = new_applications_body + f'{application.get_extended_version_json()}\n\n'
+    else:
+        logger.info('Skipping new applications in digest email, no updates')
+
+    updated_applications_body = ''
+    if len(updated_applications_body) != 0:
+        updated_applications_body = updated_applications_body + f'\n\nUpdated applications:\n\n'
+
+        for application_update in updated_applications:
+            application_from_github = application_update[0]
+            application = application_update[1]
+
+            if set(application_from_github.permissions) != set(application.permissions):
+                logger.info(f'Adding app permissions update to digest {application.id}')
+                updated_applications_body = updated_applications_body + f'Application ID: {application.id}\n'
+                updated_applications_body = updated_applications_body + f'Previous Dangerous count permissions: {application.dangerous_permissions_count}\n'
+                updated_applications_body = updated_applications_body + f'New Dangerous count permissions: {application_from_github.dangerous_permissions_count}\n'
+                updated_applications_body = updated_applications_body + f'Previous permissions:\n{json.dumps(application_from_github.permissions, indent=2)}\n'
+                updated_applications_body = updated_applications_body + f'New permissions:\n{json.dumps(application.permissions, indent=2)}\n'
+
+    if len(new_applications_body) == 0 and len(updated_applications_body) == 0:
+        logger.info('Skipping digest email, no updates')
+        return
+
+    body = f'Digest {datetime.now().strftime("%m/%d/%Y")}' \
+           f'\n' \
+           f'\n' \
+           f'{new_applications_body}\n' \
+           f'\n' \
+           f'{updated_applications_body}'
+
+    email_client.send_email(subject, body)
